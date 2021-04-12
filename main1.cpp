@@ -1,7 +1,11 @@
+#include <stdio.h>
+#include <string.h>
 #include <iostream>
 #include <fstream>
 #include <queue>
-
+#include <cctype>
+#include <algorithm>
+#include <unordered_set>
 using namespace std;
 
 
@@ -26,21 +30,28 @@ ifstream in;
 ofstream out;
 in.open(inputFile);
 out.open(outputFile);
-nordered_set<string> keyWords = {"while", "if" , "choose", "print"};
+unordered_set<string> keyWords = {"while", "if" , "choose", "print"};
 string line;
 
 while (in.peek() != EOF) { //Bu javadaki hasNextLine() fonksiyonunun yaptığını yapıyo
 	getline(in, line);
 	string first = findFirstWord(line);
-	if( line.length() == 0 || (first[0] >= 48 && first[0] <= 57)){ //ilk kelimenin ilk karakteri sayıyla başlıyosa
+	if( first.length() == 0 || (first[0] >= 48 && first[0] <= 57)){ //ilk kelimenin ilk karakteri sayıyla başlıyosa
 		continue;
 	}
-	if(keyWords.find(first) == keyWords.end()){
-
+	if(keyWords.find(first) == keyWords.end()){ // Kelime keyword değilse ve sayıyla başlamıyosa buraya, Assignment olcak
+		string token = strtok(line, "="); //YA bu amk kodu çalışmıyo bu kısmı diyo ki 1.arguman char* olsun??
+		token = token.erase(remove_if(token.begin(), token.end(), ::isspace), token.end()); //sondaki whitescapeleri silme kodu 
+		if(first == token) {
+			cout << token << endl ;
+			//Check RHS
+		}
+		else{
+			//LHS error
+		}
 	}
 	else{
 		//while if choose kısmı
 	}
 
-}
 return 0; }
