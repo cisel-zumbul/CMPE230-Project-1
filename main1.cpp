@@ -11,9 +11,14 @@ using namespace std;
 
 string findFirstWord(string line){
 	string str = "";
+	bool didStart = false;
 	for(int i= 0; i < line.length(); i++){
 		if((line[i] >= 48 && line[i] <= 57) || (line[i] >=65 && line[i] <=90) || (line[i]>=97 && line[i]<=122)){
+			didStart = true;
 			str = str + line[i];
+		}
+		else if(!didStart){
+			continue;
 		}
 		else{
 			break;
@@ -40,8 +45,11 @@ while (in.peek() != EOF) { //Bu javadaki hasNextLine() fonksiyonunun yaptığın
 		continue;
 	}
 	if(keyWords.find(first) == keyWords.end()){ // Kelime keyword değilse ve sayıyla başlamıyosa buraya, Assignment olcak
-		string token = strtok(line, "="); //YA bu amk kodu çalışmıyo bu kısmı diyo ki 1.arguman char* olsun??
-		token = token.erase(remove_if(token.begin(), token.end(), ::isspace), token.end()); //sondaki whitescapeleri silme kodu 
+		char ch[line.length()+1];
+		strcpy(ch, line.c_str());
+		const char* lim = "=";
+		string token = strtok(ch, lim); 
+		token.erase(remove_if(token.begin(), token.end(), ::isspace), token.end()); //sondaki whitescapeleri silme kodu 
 		if(first == token) {
 			cout << token << endl ;
 			//Check RHS
@@ -53,5 +61,6 @@ while (in.peek() != EOF) { //Bu javadaki hasNextLine() fonksiyonunun yaptığın
 	else{
 		//while if choose kısmı
 	}
-
-return 0; }
+}
+return 0; 
+}
