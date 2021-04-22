@@ -21,6 +21,13 @@ void store(string thing, string var, ofstream& out)
 	return;
 }
 
+void condition(string last, string before_last, ofstream& out){
+	out << "\t" << last << " = icmp ne i32 " << before_last <<  ", 0" << endl;
+}
+
+void goBody(string where, string target, ofstream& out){
+	out << "\tbr i1 " << target << ", label %" << where << "body, label %" << where << "end" << endl;
+}
 string getTemp()
 {
 	static int i = 0;
@@ -98,6 +105,7 @@ struct lineReader{
 		return cursor != line_length;
 	}
 
+
 private:
 	void findNext()
 	{
@@ -137,9 +145,10 @@ string operatinator(string operat, string op1, string op2, ofstream& out)
 	return temp;
 }
 
-string expressionParser(lineReader& reader, ofstream& out)
+string expressionParser(queue<string> expr, ofstream& out)
 {	
 	const char operators[6] = {'+','-','*','/'};
+	lineReader reader(expr);
 	queue<string> out_queue;
 	stack<char> op_stack;
 	while(reader.has())
@@ -270,27 +279,95 @@ int main(int argc, char const *argv[]) {
 		getline(in, line);
 		lineReader reader(line);
 		string first_word = reader.get();
-
-
 		if(first_word.length() == 0 || (first_word[0] >= 48 && first_word[0] <= 57)){ //ilk kelimenin ilk karakteri sayıyla başlıyosa
 			// Syntax error
-			continue;
+			return 0;
+		}
+		if(first_word == "}"){
+			if(!conditionQ.empty()){
+				out << "\tbr label" << conditionQ.top().substr(0,2) << "cond";
+			}
 		}
 		if(keyWords.find(first_word) == keyWords.end()){ // Kelime keyword değilse ve sayıyla başlamıyosa buraya, Assignment olcak			
-			if(reader.get() == "=") {
+			if(reader.peek() == "=") {
+				reader.get();
 				createVar(first_word, out);
 				//Shunting-Yard	y
-				store(expressionParser(reader, out), first_word, out);
+				store(expressionParser(line, out), first_word, out);
 				out << "\n";
-
-
-			}
-			else{
-				//LHS error
 			}
 		}
 		else{
-			//while if choose kısmı
+			if(first_word == "while"){
+				cout << "hello" << endl;
+				queue<string> strQ;
+				if(reader.peek() == "("){
+					while(reader.peek() != "{") {
+						token = reader.get();
+						strQ.push(token);
+						if(!reader.has()) {
+							//Error
+							return 0;
+						}
+					}
+					if(reader.has()) {
+						//Error
+						return 0;
+					}
+					else {
+						out << "br label %whcond\n\n";
+						out << "whcond:\n" ;
+						string before_last = expressionParser(strQ, out);
+						string last = getTemp();
+						condition(last, before_last, out);
+						goBody("wh", last, out);
+						out << "whbody:\n" ;
+					}
+					else{
+						//error
+						return 0;
+					}	
+				}
+				else {
+					//error
+					return 0 ;
+				}
+			}
+			else if (first_word == "if"){
+				queue<string> strQ;
+				if(reader.peek() == "("){
+					while(reader.peek() != "{") {
+						token = reader.get();
+						strQ.push(token);
+						if(!reader.has()) {
+							//Error
+							return 0;
+						}
+					}
+					if(reader.has()) {
+						//Error
+						return 0;
+					}
+					else {
+						out <<"br label %ifcond\n\n";
+						out <<"ifcond:\n";
+						string before_last = expressionParser(strQ, out);
+						string last = getTemp();
+						condition(last, before_last, out);
+						goBody("if", last, out);
+						out << "ifbody:\n";
+					}
+			}
+			else if ( first_word == "print"){
+
+			}
+			else if(first_word == "choose"){
+
+			}
+			else {
+					//error
+			}
 		}
+
 	}
 }
