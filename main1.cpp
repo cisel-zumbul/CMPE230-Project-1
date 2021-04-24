@@ -374,11 +374,24 @@ int main(int argc, char const *argv[]) {
         getline(in, line);
         lineReader reader(line);
         string first_word = reader.get();
-        if(first_word.length() == 0)
+        if(first_word.length() == 0 || first_word == "#")
             continue;
-        if(first_word == "}" && !conditionStc.empty()){
-            out << "\n" << conditionStc.top() << "end:\n";
-            conditionStc.pop();
+        if(first_word == "}"){
+            if(conditionStc.size() == 1){
+                out << "\n" << conditionStc.top() << "end:\n";
+                conditionStc.pop();
+                if(reader.has()){
+                    cout << "line: " << count << " Syntax Error";
+                    hasError = true;
+                    break;
+                }
+            continue;
+            } 
+            else{
+                cout << "line: " << count << " Syntax Error";
+                hasError = true;
+                break;
+            }  
         }
         if(first_word[0] >= 48 && first_word[0] <= 57) { //ilk kelimenin ilk karakteri sayıyla başlıyosa
             cout << "line: " << count << " Syntax Error";
@@ -510,6 +523,12 @@ int main(int argc, char const *argv[]) {
             }
 
         }
+    }
+
+
+    if(!conditionStc.empty()){
+        cout << "line: " << count << " Syntax Error";
+        hasError = true;
     }
 
     out.close();
