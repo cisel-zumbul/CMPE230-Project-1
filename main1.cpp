@@ -285,53 +285,85 @@ string expressionParser(string expr, ofstream &out) {
     return expressionParser(reader, out);
 }
 
-string choose (string expression, lineReader& reader, ofstream &out) {
-    if(reader.peek() == "("){
-        reader.get();
+string choose (queue<string> expQ, ofstream &out) {
+    if(expQ.front() == "("){
+        expQ.pop();
+        int prs = 0;
         queue<string> strQ1;
-        while(reader.peek() != ","){
-            strQ1.push(reader.get());
-            if(!reader.has()){
+        while(expQ.front() != "," || prs != 0){
+            if(expQ.front() == "("){
+                prs++;
+            }
+            else if(expQ.front() == ")"){
+                prs--;
+            }
+            strQ1.push(expQ.front());
+            expQ.pop();
+            if(!expQ.empty()){
                 return "ERROR";
             }
         }
-        reader.get();
+        expQ.pop();
         string exp1 = expressionParser(strQ1, out);
         if(exp1 == "ERROR")
             return exp1;
 
+        prs = 0;
         queue<string> strQ2;
-        while(reader.peek() != ","){
-            strQ2.push(reader.get());
-            if(!reader.has()){
+        while(expQ.front() != "," || prs != 0){
+            if(expQ.front() == "("){
+                prs++;
+            }
+            else if(expQ.front() == ")"){
+                prs--;
+            }
+            strQ2.push(expQ.front());
+            expQ.pop();
+            if(!expQ.empty()){
                 return "ERROR";
             }
         }
-        reader.get();
+        expQ.pop();
         string exp2 = expressionParser(strQ2, out);
         if(exp2 == "ERROR")
             return exp2;
 
+        prs = 0;
         queue<string> strQ3;
-         while(reader.peek() != ","){
-            strQ3.push(reader.get());
-            if(!reader.has()){
+         while(expQ.front() != "," || prs != 0){
+            if(expQ.front() == "("){
+                prs++;
+            }
+            else if(expQ.front() == ")"){
+                prs--;
+            }
+            strQ3.push(expQ.front());
+            expQ.pop();
+            if(!expQ.empty()){
                 return "ERROR";
             }
         }
-        reader.get();
+        expQ.pop();
         string exp3 = expressionParser(strQ3, out);
         if(exp3 == "ERROR")
             return exp3;
 
+        prs = 0; 
         queue<string> strQ4;
-         while(reader.peek() != ")"){
-            strQ4.push(reader.get());
-            if(!reader.has()){
+         while(expQ.front() != ")" || prs != 0){
+            if(expQ.front() == "("){
+                prs++;
+            }
+            else if(expQ.front() == ")"){
+                prs--;
+            }
+            strQ4.push(expQ.front());
+            expQ.pop();
+            if(!expQ.empty()){
                 return "ERROR";
             }
         }
-        reader.get();
+        expQ.pop();
         string exp4 = expressionParser(strQ4, out);
         if(exp4 == "ERROR")
             return exp4;
@@ -378,6 +410,10 @@ int main(int argc, char const *argv[]) {
             continue;
         if(first_word == "}"){
             if(conditionStc.size() == 1){
+                string cond = conditionStc.top();
+                if(cond.substr(0,2) == "wh"){
+                    out << "\t br label %" << cond << "cond\n";
+                }
                 out << "\n" << conditionStc.top() << "end:\n";
                 conditionStc.pop();
                 if(reader.has()){
@@ -514,7 +550,9 @@ int main(int argc, char const *argv[]) {
                 }
             }
             else if(first_word == "choose") {
-                choose(line,reader, out);
+                cout << "line: " << count << " Syntax Error";
+                hasError = true;
+                break;
             } 
             else {
                 cout << "line: " << count << " Syntax Error";
@@ -549,6 +587,8 @@ int main(int argc, char const *argv[]) {
         out_final << line << "\n";
     }
 
+    out_final << "\tret 32 0" << "\n" ;
+    out_final << "}" ;
     copier.close();
     out_final.close();
     remove(".intermediate");
