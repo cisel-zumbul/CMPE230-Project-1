@@ -412,7 +412,10 @@ int main(int argc, char const *argv[]) {
             if(conditionStc.size() == 1){
                 string cond = conditionStc.top();
                 if(cond.substr(0,2) == "wh"){
-                    out << "\t br label %" << cond << "cond\n";
+                    out << "\tbr label %" << cond << "cond\n";
+                }
+                else{
+                    out << "\tbr label %" << cond << "end\n";
                 }
                 out << "\n" << conditionStc.top() << "end:\n";
                 conditionStc.pop();
@@ -587,7 +590,7 @@ int main(int argc, char const *argv[]) {
         out_final << line << "\n";
     }
 
-    out_final << "\tret 32 0" << "\n" ;
+    out_final << "\tret i32 0" << "\n" ;
     out_final << "}" ;
     copier.close();
     out_final.close();
