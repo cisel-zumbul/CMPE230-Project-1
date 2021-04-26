@@ -44,11 +44,9 @@ bool isValidVar(string var) {
         if(('a' <= var[0] and var[0] <= 'z') or ('A' <= var[0] and var[0] <= 'Z')) {
             return true;
         } else {
-            cout << "Syntax error: Variables start with letters\n";
             return false;
         }
     } else {
-        cout << "Syntax error: Unexpected keyword\n";
         return false;
     }
 }
@@ -80,9 +78,13 @@ struct lineReader {
         return line_text.substr(cursor, cursor_size);
     }
     string get() {
-        string out = line_text.substr(cursor, cursor_size);
-        findNext();
-        return out;
+        if(has()) {
+            string out = line_text.substr(cursor, cursor_size);
+            findNext();
+            return out;
+        } else {
+            return "";
+        }
     }
     bool has() {
         return cursor != line_length;
@@ -109,6 +111,9 @@ private:
         } else {
             cursor_size = 1;
         }
+        if(line_text[cursor] == '#') {
+            cursor = line_length;
+        }
     }
     bool isWhiteSpace(char a) {
         return find(begin(white_space), end(white_space), a) != end(white_space);
@@ -122,14 +127,14 @@ struct variableHandler {
 
     static string initialize(string id) {
         if(exists(id)) {
-            cout << "Compile Error: double initialize variable";
+            //cout << "Compile Error: double initialize variable";
             return "ERROR";
         } else {
             if(isValidVar(id)) {
                 variables.push_back(id);
                 return "success";
             } else {
-                cout << "Syntax error: invalid variable \n";
+                //cout << "Syntax error: invalid variable \n";
                 return "ERROR";
             }
         }
@@ -160,6 +165,102 @@ string operatinator(string operat, string op1, string op2, ofstream &out) {
     return temp;
 }
 
+string expressionParser(queue<string> &expr, ofstream &out);
+
+string choose (queue<string> expQ, ofstream &out) {
+
+    if(expQ.front() == "(") {
+        expQ.pop();
+        int prs = 0;
+        queue<string> strQ1;
+        while(expQ.front() != "," || prs != 0) {
+            if(expQ.front() == "(") {
+                prs++;
+            } else if(expQ.front() == ")") {
+                prs--;
+            }
+            strQ1.push(expQ.front());
+            expQ.pop();
+            if(expQ.empty()) {
+                return "ERROR1";
+            }
+        }
+        expQ.pop();
+        string exp1 = expressionParser(strQ1, out);
+        if(exp1 == "ERROR")
+            return exp1;
+
+        prs = 0;
+        queue<string> strQ2;
+        while(expQ.front() != "," || prs != 0) {
+            if(expQ.front() == "(") {
+                prs++;
+            } else if(expQ.front() == ")") {
+                prs--;
+            }
+            strQ2.push(expQ.front());
+            expQ.pop();
+            if(expQ.empty()) {
+                return "ERROR";
+            }
+        }
+        expQ.pop();
+        string exp2 = expressionParser(strQ2, out);
+        if(exp2 == "ERROR")
+            return exp2;
+
+        prs = 0;
+        queue<string> strQ3;
+        while(expQ.front() != "," || prs != 0) {
+            if(expQ.front() == "(") {
+                prs++;
+            } else if(expQ.front() == ")") {
+                prs--;
+            }
+            strQ3.push(expQ.front());
+            expQ.pop();
+            if(expQ.empty()) {
+                return "ERROR";
+            }
+        }
+        expQ.pop();
+        string exp3 = expressionParser(strQ3, out);
+        if(exp3 == "ERROR")
+            return exp3;
+
+        prs = 0;
+        queue<string> strQ4;
+        while(expQ.front() != ")" || prs != 0) {
+            if(expQ.front() == "(") {
+                prs++;
+            } else if(expQ.front() == ")") {
+                prs--;
+            }
+            strQ4.push(expQ.front());
+            expQ.pop();
+            if(expQ.empty()) {
+                return "ERROR";
+            }
+        }
+        expQ.pop();
+        string exp4 = expressionParser(strQ4, out);
+        if(exp4 == "ERROR")
+            return exp4;
+
+        string first = getTemp();
+        string second = getTemp();
+        string third = getTemp();
+        string last = getTemp();
+        out << "\t" << first << " = icmp sgt i32 " << exp1 << ", 0\n";
+        out << "\t" << second << " = icmp eq i32 " << exp1 << ", 0\n";
+        out << "\t" << third << " = select i1 " << first << ", i32 " << exp3 << ", i32 " << exp4 << "\n";
+        out << "\t" << last << " = select i1 " << second << ", i32 " << exp2 << ", i32 " << third << "\n";
+        return last;
+    } else {
+        return "ERROR";
+    }
+}
+
 string expressionParser(queue<string> &expr, ofstream &out) {
     const char operators[6] = {'+', '-', '*', '/'};
     queue<string> out_queue;
@@ -168,9 +269,9 @@ string expressionParser(queue<string> &expr, ofstream &out) {
     while(!expr.empty()) {
         string token = expr.front();
         expr.pop();
-        if(isAlphaNumeric(token[0])) {
+        if(isNumber(token) or isValidVar(token)) {
             if(operatortime) {
-                cout << "Syntax error: non operator after operand\n";
+                //cout << "Syntax error: non operator after operand1\n";
                 return "ERROR";
             }
             operatortime = true;
@@ -178,7 +279,7 @@ string expressionParser(queue<string> &expr, ofstream &out) {
         } else {
             if(find(begin(operators), end(operators), token[0]) != end(operators)) {
                 if(!operatortime) {
-                    cout << "Syntax error: operator after operand\n";
+                    //cout << "Syntax error: operator after operand2\n";
                     return "ERROR";
                 }
                 operatortime = false;
@@ -197,13 +298,13 @@ string expressionParser(queue<string> &expr, ofstream &out) {
                 op_stack.push(token[0]);
             } else if(token[0] == '(') {
                 if(operatortime) {
-                    cout << "Syntax error: non operator after operand\n";
+                    //cout << "Syntax error: non operator after operand3\n";
                     return "ERROR";
                 }
                 op_stack.push(token[0]);
             } else if(token[0] == ')') {
                 if(!operatortime) {
-                    cout << "Syntax error: wrong close paranthesis\n";
+                    //cout << "Syntax error: wrong close paranthesis\n";
                     return "ERROR";
                 }
                 operatortime = true;
@@ -211,13 +312,46 @@ string expressionParser(queue<string> &expr, ofstream &out) {
                     out_queue.push(string(1, op_stack.top()));
                     op_stack.pop();
                     if(op_stack.empty()) {
-                        cout << "Syntax error: missing paranthesis '('\n";
+                        //cout << "Syntax error: missing paranthesis '('\n";
                         return "ERROR";
                     }
                 }
                 op_stack.pop();
+            } else if(token == "choose") {
+
+                if(operatortime) {
+                    //cout << "Syntax error: non operator after operand4\n";
+                    return "ERROR";
+                }
+                operatortime = true;
+                int para = 0;
+                queue<string> choose_q;
+
+                while(!expr.empty()) {
+                    string top = expr.front();
+
+                    expr.pop();
+                    choose_q.push(top);
+                    if(top[0] == '(') {
+                        para++;
+                    } else if(top[0] == ')') {
+                        para--;
+                        if(para == 0) {
+                            break;
+                        }
+                    }
+                }
+                if(para != 0) {
+                    //cout << "Syntax error: missing choose )\n";
+                    return "ERROR";
+                }
+                string choose_ret = choose(choose_q, out);
+                if(choose_ret == "ERROR")
+                    return "ERROR";
+                out_queue.push(choose_ret);
+
             } else {
-                cout << "Syntax error: nonsensical character\n";
+                //cout << "Syntax error: nonsensical character\n";
                 return "ERROR";
             }
         }
@@ -250,7 +384,7 @@ string expressionParser(queue<string> &expr, ofstream &out) {
             string *ops[2] = {&op1, &op2};
             for( int i = 0; i < 2; i++) {
                 if(operand_stack.empty()) {
-                    cout << "Syntax error: not enough operands";
+                    //cout << "Syntax error: not enough operands";
                     return "ERROR";
                 } else {
                     string curop = operand_stack.top();
@@ -267,6 +401,14 @@ string expressionParser(queue<string> &expr, ofstream &out) {
             } else if(subj[0] == '/') {
                 operand_stack.push(operatinator("udiv", op2, op1, out));
             }
+        } else if(subj[0] == '(')
+        {
+        	//cout << "missing (\n" << endl;
+        	return "ERROR";
+        } else
+        {
+        	cout << "this shouldn't happen :/\n";
+        	return "ERROR";
         }
     }
     return operand_stack.top();
@@ -280,108 +422,9 @@ string expressionParser(lineReader &expr, ofstream &out) {
     return expressionParser(strQ, out);
 }
 
-string expressionParser(string expr, ofstream &out) {
-    lineReader reader(expr);
-    return expressionParser(reader, out);
-}
 
-string choose (queue<string> expQ, ofstream &out) {
-    if(expQ.front() == "("){
-        expQ.pop();
-        int prs = 0;
-        queue<string> strQ1;
-        while(expQ.front() != "," || prs != 0){
-            if(expQ.front() == "("){
-                prs++;
-            }
-            else if(expQ.front() == ")"){
-                prs--;
-            }
-            strQ1.push(expQ.front());
-            expQ.pop();
-            if(!expQ.empty()){
-                return "ERROR";
-            }
-        }
-        expQ.pop();
-        string exp1 = expressionParser(strQ1, out);
-        if(exp1 == "ERROR")
-            return exp1;
 
-        prs = 0;
-        queue<string> strQ2;
-        while(expQ.front() != "," || prs != 0){
-            if(expQ.front() == "("){
-                prs++;
-            }
-            else if(expQ.front() == ")"){
-                prs--;
-            }
-            strQ2.push(expQ.front());
-            expQ.pop();
-            if(!expQ.empty()){
-                return "ERROR";
-            }
-        }
-        expQ.pop();
-        string exp2 = expressionParser(strQ2, out);
-        if(exp2 == "ERROR")
-            return exp2;
 
-        prs = 0;
-        queue<string> strQ3;
-         while(expQ.front() != "," || prs != 0){
-            if(expQ.front() == "("){
-                prs++;
-            }
-            else if(expQ.front() == ")"){
-                prs--;
-            }
-            strQ3.push(expQ.front());
-            expQ.pop();
-            if(!expQ.empty()){
-                return "ERROR";
-            }
-        }
-        expQ.pop();
-        string exp3 = expressionParser(strQ3, out);
-        if(exp3 == "ERROR")
-            return exp3;
-
-        prs = 0; 
-        queue<string> strQ4;
-         while(expQ.front() != ")" || prs != 0){
-            if(expQ.front() == "("){
-                prs++;
-            }
-            else if(expQ.front() == ")"){
-                prs--;
-            }
-            strQ4.push(expQ.front());
-            expQ.pop();
-            if(!expQ.empty()){
-                return "ERROR";
-            }
-        }
-        expQ.pop();
-        string exp4 = expressionParser(strQ4, out);
-        if(exp4 == "ERROR")
-            return exp4;
-
-        string first = getTemp();
-        string second = getTemp();
-        string third = getTemp();
-        string last = getTemp();
-        out << "\t" << first << " = icmp sgt i32 " << exp1 << ", 0\n";
-        out << "\t" << second << " = icmp eq i32 " << exp1 << ", 0\n";
-        out << "\t" << third << " = select i1 " << first << ", " << exp3 << ", " << exp4 << "\n";
-        out << "\t" << last << " = select i1 " << second << ", " << exp2 << ", " << third << "\n";
-        return last;
-    }
-    else{
-    return "ERROR";
-    }
-}
 
 int main(int argc, char const *argv[]) {
 
@@ -408,17 +451,17 @@ int main(int argc, char const *argv[]) {
         string first_word = reader.get();
         if(first_word.length() == 0 || first_word == "#")
             continue;
-        if(first_word == "}"){
+        if(first_word == "}") {
             string cond = conditionStc.top();
-            if(cond.substr(0,2) == "wh"){
+            if(cond.substr(0, 2) == "wh") {
                 out << "\tbr label %" << cond << "cond\n";
-            }
-            else{
+            } else {
                 out << "\tbr label %" << cond << "end\n";
             }
             out << "\n" << conditionStc.top() << "end:\n";
             conditionStc.pop();
-            if(reader.has()){
+            reader.get();
+            if(reader.has()) {
                 cout << "Line: " << count << " syntax error";
                 hasError = true;
                 break;
@@ -432,25 +475,24 @@ int main(int argc, char const *argv[]) {
         if(keyWords.find(first_word) == keyWords.end()) { // Kelime keyword değilse ve sayıyla başlamıyosa buraya, Assignment olcak
             if(reader.peek() == "=") {
                 reader.get();
-                if(!variableHandler::exists(first_word)){ //Neyce yazıyo bu çocuk amk
+                if(!variableHandler::exists(first_word)) { //Neyce yazıyo bu çocuk amk
                     variableHandler::initialize(first_word);
                 }
-                //Shunting-Yard	
+                //Shunting-Yard
                 string exp = expressionParser(reader, out);
                 if(exp == "ERROR") {
-                    cout << "Line: " << count << " syntax error";
+                    cout << "Line: " << count << " syntax error1";
                     hasError = true;
                 }
                 store(exp, first_word, out);
                 out << "\n";
             }
-        } 
-        else {
+        } else {
             if(first_word == "while") {
                 queue<string> strQ;
                 string token;
 
-                    cout << "hello";
+                cout << "hello";
                 if(reader.peek() == "(") {
                     while(reader.peek() != "{") {
                         token = reader.get();
@@ -463,8 +505,8 @@ int main(int argc, char const *argv[]) {
                     reader.get();
                     if(reader.has()) {
                         hasError = true;
-                    } 
-                    if(hasError){
+                    }
+                    if(hasError) {
                         cout << "Line: " << count << " syntax error";
                         break;
                     }
@@ -490,14 +532,12 @@ int main(int argc, char const *argv[]) {
                         hasError = true;
                         break;
                     }
-                }
-                else {
+                } else {
                     cout << "Line: " << count << " syntax error";
                     hasError = true;
                     break;
                 }
-            } 
-            else if (first_word == "if") {
+            } else if (first_word == "if") {
                 queue<string> strQ;
                 string token;
                 if(reader.peek() == "(") {
@@ -506,14 +546,14 @@ int main(int argc, char const *argv[]) {
                         strQ.push(token);
                         if(!reader.has()) {
                             hasError = true;
-                             break;
+                            break;
                         }
                     }
                     reader.get();
                     if(reader.has()) {
                         hasError = true;
-                    } 
-                    if(hasError){
+                    }
+                    if(hasError) {
                         cout << "Line: " << count << " syntax error";
                         break;
                     }
@@ -533,38 +573,36 @@ int main(int argc, char const *argv[]) {
                         goBody(name, last, out);
                         out << name << "body:\n";
                         conditionStc.push(name);
+                    }
+                    else{
+                        cout << "line: " << count << "Syntax Error";
                     }          
-                }
-                else{
+                } else {
                     cout << "Line: " << count << " syntax error";
                     hasError = true;
                     break;
                 }
-            }
-            else if (first_word == "print") {
+            } else if (first_word == "print") {
                 queue<string> strQ;
                 string token;
-                if(reader.peek() == "("){
+                if(reader.peek() == "(") {
                     string temp = expressionParser(reader, out);
-                    if(temp == "ERROR" ){
+                    if(temp == "ERROR" ) {
                         cout << "Line: " << count << " syntax error";
                         hasError = true;
                         break;
                     }
                     out << "\tcall i32 (i8*, ...)* @printf(i8* getelementptr ([4 x i8]* @print.str, i32 0, i32 0), i32 " << temp << ")\n";
-                }
-                else{
+                } else {
                     cout << "Line: " << count << " syntax error";
                     hasError = true;
                     break;
                 }
-            }
-            else if(first_word == "choose") {
+            } else if(first_word == "choose") {
                 cout << "Line: " << count << " syntax error";
                 hasError = true;
                 break;
-            } 
-            else {
+            } else {
                 cout << "Line: " << count << " syntax error";
                 hasError = true;
                 break;
@@ -574,7 +612,7 @@ int main(int argc, char const *argv[]) {
     }
 
 
-    if(!conditionStc.empty()){
+    if(!conditionStc.empty()) {
         cout << "Line: " << count << " syntax error";
         hasError = true;
     }
