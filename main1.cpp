@@ -116,7 +116,7 @@ private:
         }
     }
     bool isWhiteSpace(char a) {
-        return find(begin(white_space), end(white_space), a) != end(white_space);
+        return isspace(a);
     }
 
 
@@ -158,12 +158,6 @@ struct variableHandler {
 };
 
 vector<string> variableHandler::variables;
-
-string operatinator(string operat, string op1, string op2, ofstream &out) {
-    string temp = getTemp();
-    out << "\t" << temp << " = " << operat << " i32 " << op1 << ", " << op2 << "\n";
-    return temp;
-}
 
 string expressionParser(queue<string> &expr, ofstream &out);
 
@@ -308,13 +302,19 @@ string expressionParser(queue<string> &expr, ofstream &out) {
                     return "ERROR";
                 }
                 operatortime = true;
+                if(op_stack.empty()) {
+                    //cout << "Syntax error: missing paranthesis '('\n";
+                    return "ERROR";
+                }
                 while(op_stack.top() != '(') {
+
                     out_queue.push(string(1, op_stack.top()));
                     op_stack.pop();
                     if(op_stack.empty()) {
                         //cout << "Syntax error: missing paranthesis '('\n";
                         return "ERROR";
                     }
+
                 }
                 op_stack.pop();
             } else if(token == "choose") {
@@ -381,7 +381,7 @@ string expressionParser(queue<string> &expr, ofstream &out) {
         } else if (find(begin(operators), end(operators), subj[0]) != end(operators)) {
             string op1;
             string op2;
-            string *ops[2] = {&op1, &op2};
+            string *ops[2] = {&op2, &op1};
             for( int i = 0; i < 2; i++) {
                 if(operand_stack.empty()) {
                     //cout << "Syntax error: not enough operands";
@@ -392,23 +392,26 @@ string expressionParser(queue<string> &expr, ofstream &out) {
                     *ops[i] = curop;
                 }
             }
+            string operat;
+            string temp = getTemp();
             if(subj[0] == '+') {
-                operand_stack.push(operatinator("add", op1, op2, out));
+                operat = "add";
             } else if(subj[0] == '-') {
-                operand_stack.push(operatinator("sub", op2, op1, out));
+                operat = "sub";
             } else if(subj[0] == '*') {
-                operand_stack.push(operatinator("mul", op1, op2, out));
+                operat = "mul";
             } else if(subj[0] == '/') {
-                operand_stack.push(operatinator("udiv", op2, op1, out));
+                operat = "sdiv";
             }
-        } else if(subj[0] == '(')
-        {
-        	//cout << "missing (\n" << endl;
-        	return "ERROR";
-        } else
-        {
-        	cout << "this shouldn't happen :/\n";
-        	return "ERROR";
+
+            out << "\t" << temp << " = " << operat << " i32 " << op1 << ", " << op2 << "\n";
+            operand_stack.push(temp);
+        } else if(subj[0] == '(') {
+            //cout << "missing (\n" << endl;
+            return "ERROR";
+        } else {
+            cout << "this shouldn't happen :/\n";
+            return "ERROR";
         }
     }
     return operand_stack.top();
@@ -431,14 +434,16 @@ int main(int argc, char const *argv[]) {
     const string boilerplate = "; ModuleID = 'mylang2ir'\ndeclare i32 @printf(i8*, ...)\n@print.str = constant [4 x i8] c\"%d\\0A\\00\"\n\ndefine i32 @main() {\n";
 
     string inputFile = argv[1];
-    string outputFile = argv[2];
+    string outputFile = inputFile.substr(0, inputFile.find_last_of('.')) + ".ll";
     ifstream in;
     ofstream out_final;
     ofstream out;
     in.open(inputFile);
+
     out_final.open(outputFile);
     out.open(".intermediate");
     bool hasError = false;
+
     unordered_set<string> keyWords = {"while", "if", "choose", "print"};
     string line;
     stack<string> conditionStc;
@@ -452,27 +457,30 @@ int main(int argc, char const *argv[]) {
         if(first_word.length() == 0 || first_word == "#")
             continue;
         if(first_word == "}") {
-            string cond = conditionStc.top();
-            if(cond.substr(0, 2) == "wh") {
-                out << "\tbr label %" << cond << "cond\n";
+            if(!conditionStc.empty()) {
+                string cond = conditionStc.top();
+                if(cond.substr(0, 2) == "wh") {
+                    out << "\tbr label %" << cond << "cond\n";
+                } else {
+                    out << "\tbr label %" << cond << "end\n";
+                }
+                out << "\n" << conditionStc.top() << "end:\n";
+                conditionStc.pop();
+                if(reader.has()) {
+                    hasError = true;
+                    break;
+                }
             } else {
-                out << "\tbr label %" << cond << "end\n";
-            }
-            out << "\n" << conditionStc.top() << "end:\n";
-            conditionStc.pop();
-            reader.get();
-            if(reader.has()) {
-                cout << "Line: " << count << " syntax error";
                 hasError = true;
                 break;
             }
         }
-        if(first_word[0] >= 48 && first_word[0] <= 57) { //ilk kelimenin ilk karakteri sayıyla başlıyosa
-            cout << "Line: " << count << " syntax error";
+        else if(first_word[0] >= 48 && first_word[0] <= 57) { //ilk kelimenin ilk karakteri sayıyla başlıyosa
+
             hasError = true;
             break;
         }
-        if(keyWords.find(first_word) == keyWords.end()) { // Kelime keyword değilse ve sayıyla başlamıyosa buraya, Assignment olcak
+        else if(keyWords.find(first_word) == keyWords.end()) { // Kelime keyword değilse ve sayıyla başlamıyosa buraya, Assignment olcak
             if(reader.peek() == "=") {
                 reader.get();
                 if(!variableHandler::exists(first_word)) { //Neyce yazıyo bu çocuk amk
@@ -481,11 +489,12 @@ int main(int argc, char const *argv[]) {
                 //Shunting-Yard
                 string exp = expressionParser(reader, out);
                 if(exp == "ERROR") {
-                    cout << "Line: " << count << " syntax error1";
                     hasError = true;
                 }
                 store(exp, first_word, out);
                 out << "\n";
+            } else {
+                hasError = true;
             }
         } else {
             if(first_word == "while") {
@@ -507,33 +516,30 @@ int main(int argc, char const *argv[]) {
                         hasError = true;
                     }
                     if(hasError) {
-                        cout << "Line: " << count << " syntax error";
                         break;
                     }
                     string name = "wh" + to_string(cdc);
-                    cout << name ;
-                    cdc++; 
+                    cdc++;
                     out << "\tbr label %" << name << "cond\n\n";
                     out << name << "cond:\n" ;
                     string before_last = expressionParser(strQ, out);
-                    if(before_last == "ERROR" ){
-                         cout << "Line: " << count << " syntax error";
+                    if(before_last == "ERROR" ) {
+                        hasError = true;
                         break;
                     }
-                    if(conditionStc.empty()){
+                    if(conditionStc.empty()) {
                         string last = getTemp();
                         condition(last, before_last, out);
                         goBody(name, last, out);
                         out << name << "body:\n";
                         conditionStc.push(name);
-                    }
-                    else {
-                        cout << "Line: " << count << " syntax error";
+                    } else {
+
                         hasError = true;
                         break;
                     }
                 } else {
-                    cout << "Line: " << count << " syntax error";
+
                     hasError = true;
                     break;
                 }
@@ -554,31 +560,29 @@ int main(int argc, char const *argv[]) {
                         hasError = true;
                     }
                     if(hasError) {
-                        cout << "Line: " << count << " syntax error";
+
                         break;
                     }
                     string name = "if" + to_string(cdc);
                     cdc++;
-                    cout << name;
                     out << "\tbr label %" << name << "cond\n\n";
                     out << name << "cond:\n";
                     string before_last = expressionParser(strQ, out);
-                    if(before_last == "ERROR" ){
+                    if(before_last == "ERROR" ) {
                         hasError = true;
                         break;
-                   }
-                    if(conditionStc.empty()){
+                    }
+                    if(conditionStc.empty()) {
                         string last = getTemp();
                         condition(last, before_last, out);
                         goBody(name, last, out);
                         out << name << "body:\n";
                         conditionStc.push(name);
+                    } else {
+                        hasError = true;
                     }
-                    else{
-                        cout << "line: " << count << "Syntax Error";
-                    }          
                 } else {
-                    cout << "Line: " << count << " syntax error";
+
                     hasError = true;
                     break;
                 }
@@ -588,22 +592,22 @@ int main(int argc, char const *argv[]) {
                 if(reader.peek() == "(") {
                     string temp = expressionParser(reader, out);
                     if(temp == "ERROR" ) {
-                        cout << "Line: " << count << " syntax error";
+
                         hasError = true;
                         break;
                     }
                     out << "\tcall i32 (i8*, ...)* @printf(i8* getelementptr ([4 x i8]* @print.str, i32 0, i32 0), i32 " << temp << ")\n";
                 } else {
-                    cout << "Line: " << count << " syntax error";
+
                     hasError = true;
                     break;
                 }
             } else if(first_word == "choose") {
-                cout << "Line: " << count << " syntax error";
+
                 hasError = true;
                 break;
             } else {
-                cout << "Line: " << count << " syntax error";
+
                 hasError = true;
                 break;
             }
@@ -613,15 +617,18 @@ int main(int argc, char const *argv[]) {
 
 
     if(!conditionStc.empty()) {
-        cout << "Line: " << count << " syntax error";
+
         hasError = true;
     }
 
     out.close();
     in.close();
     if(hasError) {
-        out_final.close();
+
         remove(".intermediate");
+        out_final << "; ModuleID = 'mylang2ir'\ndeclare i32 @printf(i8 *, ...)\n@print.error = constant [23 x i8] c\"Line %d: syntax error\\0A\\00\"\n\ndefine i32 @main() {\n\tcall i32 (i8 *, ...)* @printf(i8* getelementptr([23 x i8]* @print.error,i32 0, i32 0) , i32 " + to_string(count) + ")\n\tret i32 0\n}";
+        out_final.close();
+        return 0;
     }
 
     out_final << boilerplate << "\n";
