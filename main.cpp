@@ -161,51 +161,62 @@ vector<string> variableHandler::variables;
 
 string expressionParser(queue<string> &expr, ofstream &out);
 
-string choose (queue<string> expQ, ofstream &out) {
-
-    if(expQ.front() == "(") {
+string choose (queue<string> expQ, ofstream &out) { //This function implements the choose function in mylang, taking expression as a string queue and outputs the necessary result.
+    if(!expQ.empty()){ //Checks if there is something in the expression queue or not.
+        if(expQ.front() == "(") { //Checks the format of the choose function
         expQ.pop();
-        int prs = 0;
+        int prs = 0; //This counts the parantheses to find the pair of first "(" which is the outermost parenthese.
         queue<string> strQ1;
-        while(expQ.front() != "," || prs != 0) {
-            if(expQ.front() == "(") {
-                prs++;
-            } else if(expQ.front() == ")") {
-                prs--;
+        if(!expQ.empty()){ //This part is for extracting 1st expression
+            while(expQ.front() != "," || prs != 0) {  //This while condition stops when it sees "," and this "," is not inside the another choose function. This is a way to determine boundaries of 1st expression.
+                if(expQ.front() == "(") {
+                    prs++;
+                } else if(expQ.front() == ")") {
+                    prs--;
+                }
+                strQ1.push(expQ.front());
+                expQ.pop();
+                if(expQ.empty()) {
+                    return "ERROR";
+                }
             }
-            strQ1.push(expQ.front());
             expQ.pop();
-            if(expQ.empty()) {
-                return "ERROR1";
-            }
+            string exp1 = expressionParser(strQ1, out); //Sends 1st expression to the parser function and stores result in exp1.
+            if(exp1 == "ERROR")
+                return exp1;
+        }    
+        else{
+            return "ERROR";
         }
-        expQ.pop();
-        string exp1 = expressionParser(strQ1, out);
-        if(exp1 == "ERROR")
-            return exp1;
-
-        prs = 0;
+            
+        prs = 0; //This counts the parantheses to find the pair of first "(" which is the outermost parenthese.
         queue<string> strQ2;
-        while(expQ.front() != "," || prs != 0) {
-            if(expQ.front() == "(") {
-                prs++;
-            } else if(expQ.front() == ")") {
-                prs--;
+        if(!expQ.empty()){ //This part is for extracting 2nd expression
+            while(expQ.front() != "," || prs != 0) {  //This while condition stops when it sees "," and this "," is not inside the another choose function. This is a way to determine boundaries of 2nd expression.
+                if(expQ.front() == "(") {
+                    prs++;
+                } else if(expQ.front() == ")") {
+                    prs--;
+                }
+                strQ2.push(expQ.front());
+                expQ.pop();
+                if(expQ.empty()) {
+                    return "ERROR";
+                }
             }
-            strQ2.push(expQ.front());
             expQ.pop();
-            if(expQ.empty()) {
-                return "ERROR";
-            }
+            string exp2 = expressionParser(strQ2, out); //Sends 2nd expression to the parser function. Stores its result in exp2.
+            if(exp2 == "ERROR")
+                return exp2;
         }
-        expQ.pop();
-        string exp2 = expressionParser(strQ2, out);
-        if(exp2 == "ERROR")
-            return exp2;
-
-        prs = 0;
+        else{
+            return "ERROR";
+        }
+            
+        prs = 0; //This counts the parantheses to find the pair of first "(" which is the outermost parenthese.
         queue<string> strQ3;
-        while(expQ.front() != "," || prs != 0) {
+        if(!expQ.empty()){ //This part is for extracting 3rd expression
+            while(expQ.front() != "," || prs != 0) { //This while condition stops when it sees "," and this "," is not inside the another choose function. This is a way to determine boundaries of 3rd expression.
             if(expQ.front() == "(") {
                 prs++;
             } else if(expQ.front() == ")") {
@@ -216,15 +227,20 @@ string choose (queue<string> expQ, ofstream &out) {
             if(expQ.empty()) {
                 return "ERROR";
             }
+            }
+            expQ.pop();
+            string exp3 = expressionParser(strQ3, out); //Sends 3rd expression to the parser function. Stores its result in exp3.
+            if(exp3 == "ERROR")
+                return exp3;
         }
-        expQ.pop();
-        string exp3 = expressionParser(strQ3, out);
-        if(exp3 == "ERROR")
-            return exp3;
+        else{
+            return "ERROR";
+        }
 
-        prs = 0;
+        prs = 0;   //This counts the parantheses to find the pair of first "(" which is the outermost parenthese.
         queue<string> strQ4;
-        while(expQ.front() != ")" || prs != 0) {
+        if(!expQ.empty()){   //This part is for extracting 4th expression
+            while(expQ.front() != ")" || prs != 0) { //This while stops when it sees ")" and this ")" is the last ")" in the exprQ.
             if(expQ.front() == "(") {
                 prs++;
             } else if(expQ.front() == ")") {
@@ -235,24 +251,38 @@ string choose (queue<string> expQ, ofstream &out) {
             if(expQ.empty()) {
                 return "ERROR";
             }
+            }
+            expQ.pop();
+            string exp4 = expressionParser(strQ4, out); //Sends 4th exression to the parser function and stores its result on exp4.
+            if(exp4 == "ERROR")
+                return exp4;
         }
-        expQ.pop();
-        string exp4 = expressionParser(strQ4, out);
-        if(exp4 == "ERROR")
-            return exp4;
-
-        string first = getTemp();
+         else{
+            return "ERROR";
+        }
+       
+        if(!expQ.empty()){ //After extracting all necessary expressions, checks if there is left or not.
+            return "ERROR";
+        }
+      
+        //If function can make it to here, this means everything is fine , syntax is true, no error.
+        string first = getTemp(); 
         string second = getTemp();
         string third = getTemp();
         string last = getTemp();
-        out << "\t" << first << " = icmp sgt i32 " << exp1 << ", 0\n";
-        out << "\t" << second << " = icmp eq i32 " << exp1 << ", 0\n";
-        out << "\t" << third << " = select i1 " << first << ", i32 " << exp3 << ", i32 " << exp4 << "\n";
-        out << "\t" << last << " = select i1 " << second << ", i32 " << exp2 << ", i32 " << third << "\n";
+        out << "\t" << first << " = icmp sgt i32 " << exp1 << ", 0\n"; //Checks whether the first expression is greater than 0 or not
+        out << "\t" << second << " = icmp eq i32 " << exp1 << ", 0\n"; //Checks whether the first expression is equal to 0 or not
+        out << "\t" << third << " = select i1 " << first << ", i32 " << exp3 << ", i32 " << exp4 << "\n"; //If first is true then third will be 3rd exp, if not it will ve 4th exp
+        out << "\t" << last << " = select i1 " << second << ", i32 " << exp2 << ", i32 " << third << "\n"; //If last is true then last will be 2nd exp, if not it will be the value of the third.
         return last;
     } else {
         return "ERROR";
+        }
     }
+    else{
+        return "ERROR";
+    }
+    
 }
 
 string expressionParser(queue<string> &expr, ofstream &out) {
