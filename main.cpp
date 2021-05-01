@@ -10,38 +10,38 @@
 using namespace std;
 
 
-void store(string thing, string var, ofstream &out) {
+void store(string thing, string var, ofstream &out) { //This prints the "store" template.
     out << "\tstore i32 " << thing << ", i32* %" << var << "\n";
     return;
 }
 
-void condition(string last, string before_last, ofstream &out) {
+void condition(string last, string before_last, ofstream &out) { //This creates the line with comparison.
     out << "\t" << last << " = icmp ne i32 " << before_last <<  ", 0" << endl;
 }
 
-void goBody(string where, string target, ofstream &out) {
+void goBody(string where, string target, ofstream &out) { //This prints branching inside the condition body.
     out << "\tbr i1 " << target << ", label %" << where << "body, label %" << where << "end\n\n";
 }
 
-string getTemp() {
+string getTemp() { //Our temporary variable creater function, directly returns temporary variable.
     static int i = 0;
     return "%alperen_kalp_cisel" + to_string(i++); //Perfect couple variable name
 }
 
-string getTemp(string var, ofstream &out) {
+string getTemp(string var, ofstream &out) { //This function gets variable and loads some value to it.
     string temp = getTemp();
     out << "\t" << temp << " = load i32* %" << var << "\n";
     return temp;
 }
 
-bool isAlphaNumeric(char a) {
+bool isAlphaNumeric(char a) { //Checks if a variable is alphanumeric or not.
     return ('a' <= a and a <= 'z') or ('A' <= a and a <= 'Z') or ('0' <= a and a <= '9');
 }
 
-bool isValidVar(string var) {
-    unordered_set<string> keyWords = {"while", "if", "choose", "print"};
+bool isValidVar(string var) { //Checks if a variable is valid or not.
+    unordered_set<string> keyWords = {"while", "if", "choose", "print"}; //Checks if the word is keyword
     if(keyWords.find(var) == keyWords.end()) {
-        if(('a' <= var[0] and var[0] <= 'z') or ('A' <= var[0] and var[0] <= 'Z')) {
+        if(('a' <= var[0] and var[0] <= 'z') or ('A' <= var[0] and var[0] <= 'Z')) { //Checks if the first char of the word is a number or not.
             return true;
         } else {
             return false;
@@ -51,7 +51,7 @@ bool isValidVar(string var) {
     }
 }
 
-bool isNumber(string var) {
+bool isNumber(string var) { //Checks if a string is a number or not.
     for( int i = 0; i < var.length(); i++) {
         if(var[i] >= '0' && var[i] <= '9') {
             continue;
