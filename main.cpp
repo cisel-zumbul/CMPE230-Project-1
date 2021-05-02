@@ -25,7 +25,7 @@ void goBody(string where, string target, ofstream &out) { //This prints branchin
 
 string getTemp() { //Our temporary variable creater function, directly returns temporary variable.
     static int i = 0;
-    return "%alperen_kalp_cisel" + to_string(i++); //Perfect couple variable name
+    return "%temp_var_" + to_string(i++);
 }
 
 string getTemp(string var, ofstream &out) { //This function gets variable and loads some value to it.
@@ -61,23 +61,23 @@ bool isNumber(string var) { //Checks if a string is a number or not.
     return true;
 }
 
-struct lineReader {
+struct lineReader {//Line reader is a tokenizer that has a stream like interface
     const char white_space[2] = {' ', '	'};
     string line_text;
     int line_length = 0;
     int cursor = 0;
     int cursor_size = 0;
 
-    lineReader(string line) {
+    lineReader(string line) {// Constructer that takes the string to be read as the parameter
         this->line_text = line;
         this->line_length = line.size();
         findNext();
     }
 
-    string peek() {
+    string peek() {//Returns what the cursor is pointing to
         return line_text.substr(cursor, cursor_size);
     }
-    string get() {
+    string get() {//Returns what the cursor is pointing to, then adances the cursor
         if(has()) {
             string out = line_text.substr(cursor, cursor_size);
             findNext();
@@ -86,13 +86,14 @@ struct lineReader {
             return "";
         }
     }
-    bool has() {
+    bool has() {//Checks if the cursor is at the end of a string
         return cursor != line_length;
     }
 
 
 private:
-    void findNext() {
+    void findNext() {//	Private funtion to advance the cursor, it groups alphanumeric characters 
+    				//	into words and also stops reading upon encountering the comment character.
         cursor += cursor_size;
         cursor_size = 0;
         for(; cursor < line_length; cursor++) {
@@ -115,36 +116,35 @@ private:
             cursor = line_length;
         }
     }
-    bool isWhiteSpace(char a) {
+    bool isWhiteSpace(char a) {// Wrapper for the isspace function, in case we need to change it
         return isspace(a);
     }
 
 
 };
 
-struct variableHandler {
+struct variableHandler {// A structure that deals with declaring, checking and storing variables
     static vector<string> variables;
 
-    static string initialize(string id) {
+    static string initialize(string id) {// Checks if the variiable is valid, then stores the id in a vector
         if(exists(id)) {
-            //cout << "Compile Error: double initialize variable";
+           
             return "ERROR";
         } else {
             if(isValidVar(id)) {
                 variables.push_back(id);
                 return "success";
             } else {
-                //cout << "Syntax error: invalid variable \n";
                 return "ERROR";
             }
         }
     }
 
-    static bool exists(string id) {
+    static bool exists(string id) {// For checking if a variable is already declared
         return find(variables.begin(), variables.end(), id) != variables.end();
     }
 
-    static string getInits() {
+    static string getInits() {// Returns all the allocations in llvm code
         string out;
         for(string id : variables) {
             out += "\t%" + id + " = alloca i32\n";
@@ -157,9 +157,9 @@ struct variableHandler {
     }
 };
 
-vector<string> variableHandler::variables;
+vector<string> variableHandler::variables; // Initialization of the static vector
 
-string expressionParser(queue<string> &expr, ofstream &out);
+string expressionParser(queue<string> &expr, ofstream &out); //Forward declaration due to cross referencing functions
 
 string choose (queue<string> expQ, ofstream &out) { //This function implements the choose function in mylang, taking expression as a string queue and outputs the necessary result.
     if(!expQ.empty()){ //Checks if there is something in the expression queue or not.
@@ -285,17 +285,16 @@ string choose (queue<string> expQ, ofstream &out) { //This function implements t
     
 }
 
-string expressionParser(queue<string> &expr, ofstream &out) {
+string expressionParser(queue<string> &expr, ofstream &out) {// Function for dealing with expressions, it implements the Shunting-Yard algorithm
     const char operators[6] = {'+', '-', '*', '/'};
     queue<string> out_queue;
     stack<char> op_stack;
-    bool operatortime = false;
-    while(!expr.empty()) {
+    bool operatortime = false;// This variable is for adding infix syntax checking to the algorithm
+    while(!expr.empty()) {// This part reads the tokenized expression and turns it into a postfix queue
         string token = expr.front();
         expr.pop();
         if(isNumber(token) or isValidVar(token)) {
             if(operatortime) {
-                //cout << "Syntax error: non operator after operand1\n";
                 return "ERROR";
             }
             operatortime = true;
@@ -303,7 +302,6 @@ string expressionParser(queue<string> &expr, ofstream &out) {
         } else {
             if(find(begin(operators), end(operators), token[0]) != end(operators)) {
                 if(!operatortime) {
-                    //cout << "Syntax error: operator after operand2\n";
                     return "ERROR";
                 }
                 operatortime = false;
@@ -322,18 +320,15 @@ string expressionParser(queue<string> &expr, ofstream &out) {
                 op_stack.push(token[0]);
             } else if(token[0] == '(') {
                 if(operatortime) {
-                    //cout << "Syntax error: non operator after operand3\n";
                     return "ERROR";
                 }
                 op_stack.push(token[0]);
             } else if(token[0] == ')') {
                 if(!operatortime) {
-                    //cout << "Syntax error: wrong close paranthesis\n";
                     return "ERROR";
                 }
                 operatortime = true;
                 if(op_stack.empty()) {
-                    //cout << "Syntax error: missing paranthesis '('\n";
                     return "ERROR";
                 }
                 while(op_stack.top() != '(') {
@@ -341,7 +336,6 @@ string expressionParser(queue<string> &expr, ofstream &out) {
                     out_queue.push(string(1, op_stack.top()));
                     op_stack.pop();
                     if(op_stack.empty()) {
-                        //cout << "Syntax error: missing paranthesis '('\n";
                         return "ERROR";
                     }
 
@@ -350,7 +344,6 @@ string expressionParser(queue<string> &expr, ofstream &out) {
             } else if(token == "choose") {
 
                 if(operatortime) {
-                    //cout << "Syntax error: non operator after operand4\n";
                     return "ERROR";
                 }
                 operatortime = true;
@@ -372,7 +365,6 @@ string expressionParser(queue<string> &expr, ofstream &out) {
                     }
                 }
                 if(para != 0) {
-                    //cout << "Syntax error: missing choose )\n";
                     return "ERROR";
                 }
                 string choose_ret = choose(choose_q, out);
@@ -381,7 +373,6 @@ string expressionParser(queue<string> &expr, ofstream &out) {
                 out_queue.push(choose_ret);
 
             } else {
-                //cout << "Syntax error: nonsensical character\n";
                 return "ERROR";
             }
         }
@@ -391,7 +382,7 @@ string expressionParser(queue<string> &expr, ofstream &out) {
         op_stack.pop();
     }
 
-
+    //This part turns the postfix queue into the llvm code
     stack<string> operand_stack;
     while(!out_queue.empty()) {
         string subj = out_queue.front();
@@ -444,10 +435,11 @@ string expressionParser(queue<string> &expr, ofstream &out) {
             return "ERROR";
         }
     }
-    return operand_stack.top();
+
+    return operand_stack.top(); //Finally returns the temp variable that the result is stored in
 }
 
-string expressionParser(lineReader &expr, ofstream &out) {
+string expressionParser(lineReader &expr, ofstream &out) { // Alternative call to the expresion parser
     queue<string> strQ;
     while(expr.has()) {
         strQ.push(expr.get());
@@ -464,14 +456,14 @@ int main(int argc, char const *argv[]) {
     const string boilerplate = "; ModuleID = 'mylang2ir'\ndeclare i32 @printf(i8*, ...)\n@print.str = constant [4 x i8] c\"%d\\0A\\00\"\n\ndefine i32 @main() {\n";
 
     string inputFile = argv[1];
-    string outputFile = inputFile.substr(0, inputFile.find_last_of('.')) + ".ll";
+    string outputFile = inputFile.substr(0, inputFile.find_last_of('.')) + ".ll"; // The name of the output file is constructed
     ifstream in;
     ofstream out_final;
     ofstream out;
     in.open(inputFile);
 
     out_final.open(outputFile);
-    out.open(".intermediate");
+    out.open(".intermediate");// An hidden intermediate file is opened
     bool hasError = false;
 
     unordered_set<string> keyWords = {"while", "if", "choose", "print"};
@@ -479,11 +471,12 @@ int main(int argc, char const *argv[]) {
     stack<string> conditionStc;
     int count = -1;
     int cdc = 0 ;
-    while (!hasError and in.peek() != EOF) { //Bu javadaki hasNextLine() fonksiyonunun yaptığını yapıyo
+    while (!hasError and in.peek() != EOF) { //	This loop reads the file line by line, as long as it 
+    										//	isn't empty or an error has been encountered
         count++;
         getline(in, line);
-        lineReader reader(line);
-        string first_word = reader.get();
+        lineReader reader(line); // The line is used to create a line reader.
+        string first_word = reader.get();// Then the first word is stored here to determine the purpose of the line
         if(first_word.length() == 0 || first_word == "#")
             continue;
         if(first_word == "}") {
@@ -505,22 +498,25 @@ int main(int argc, char const *argv[]) {
                 break;
             }
         }
-        else if(first_word[0] >= 48 && first_word[0] <= 57) { //ilk kelimenin ilk karakteri sayıyla başlıyosa
+        else if(first_word[0] >= 48 && first_word[0] <= 57) { //Checks if the first character is a number, which is always a syntax error
 
             hasError = true;
             break;
         }
-        else if(keyWords.find(first_word) == keyWords.end()) { // Kelime keyword değilse ve sayıyla başlamıyosa buraya, Assignment olcak
-            if(reader.peek() == "=") {
+        else if(keyWords.find(first_word) == keyWords.end()) { // if the first word is not a keyword, it is assumed to be an assignment statement
+            if(reader.peek() == "=") {// Checks for '=' statement
                 reader.get();
-                if(!variableHandler::exists(first_word)) { //Neyce yazıyo bu çocuk amk
+                if(!variableHandler::exists(first_word)) { // if variable does not exist, we initialzie it
                     variableHandler::initialize(first_word);
                 }
-                //Shunting-Yard
+
+                // Then the right hand side is passed to the expression parser
                 string exp = expressionParser(reader, out);
                 if(exp == "ERROR") {
                     hasError = true;
                 }
+
+                // Then the returned value is stored in the variable
                 store(exp, first_word, out);
                 out << "\n";
             } else {
@@ -653,7 +649,7 @@ int main(int argc, char const *argv[]) {
 
     out.close();
     in.close();
-    if(hasError) {
+    if(hasError) {// if an error has been encountered, the intermediate file is removed and the code for printing the error is writte out instead
 
         remove(".intermediate");
         out_final << "; ModuleID = 'mylang2ir'\ndeclare i32 @printf(i8 *, ...)\n@print.error = constant [23 x i8] c\"Line %d: syntax error\\0A\\00\"\n\ndefine i32 @main() {\n\tcall i32 (i8 *, ...)* @printf(i8* getelementptr([23 x i8]* @print.error,i32 0, i32 0) , i32 " + to_string(count) + ")\n\tret i32 0\n}";
@@ -661,6 +657,7 @@ int main(int argc, char const *argv[]) {
         return 0;
     }
 
+    // at the end, the boilerplate code and the variable allocations are written to the output file and then the intermediate file is copied over to the output.
     out_final << boilerplate << "\n";
     out_final << variableHandler::getInits();
     out_final << "\n";
@@ -673,8 +670,12 @@ int main(int argc, char const *argv[]) {
     }
 
     out_final << "\tret i32 0" << "\n" ;
-    out_final << "}" ;
+    out_final << "}";
+
+    // THe files are closed and the intermediate file is removed
     copier.close();
     out_final.close();
     remove(".intermediate");
+
+    return 0;
 }
