@@ -163,6 +163,7 @@ string expressionParser(queue<string> &expr, ofstream &out); //Forward declarati
 
 string choose (queue<string> expQ, ofstream &out) { //This function implements the choose function in mylang, taking expression as a string queue and outputs the necessary result.
     if(!expQ.empty()){ //Checks if there is something in the expression queue or not.
+        string exp1, exp2, exp3, exp4;
         if(expQ.front() == "(") { //Checks the format of the choose function
         expQ.pop();
         int prs = 0; //This counts the parantheses to find the pair of first "(" which is the outermost parenthese.
@@ -181,7 +182,7 @@ string choose (queue<string> expQ, ofstream &out) { //This function implements t
                 }
             }
             expQ.pop();
-            string exp1 = expressionParser(strQ1, out); //Sends 1st expression to the parser function and stores result in exp1.
+            exp1 = expressionParser(strQ1, out); //Sends 1st expression to the parser function and stores result in exp1.
             if(exp1 == "ERROR")
                 return exp1;
         }    
@@ -205,7 +206,7 @@ string choose (queue<string> expQ, ofstream &out) { //This function implements t
                 }
             }
             expQ.pop();
-            string exp2 = expressionParser(strQ2, out); //Sends 2nd expression to the parser function. Stores its result in exp2.
+            exp2 = expressionParser(strQ2, out); //Sends 2nd expression to the parser function. Stores its result in exp2.
             if(exp2 == "ERROR")
                 return exp2;
         }
@@ -229,7 +230,7 @@ string choose (queue<string> expQ, ofstream &out) { //This function implements t
             }
             }
             expQ.pop();
-            string exp3 = expressionParser(strQ3, out); //Sends 3rd expression to the parser function. Stores its result in exp3.
+            exp3 = expressionParser(strQ3, out); //Sends 3rd expression to the parser function. Stores its result in exp3.
             if(exp3 == "ERROR")
                 return exp3;
         }
@@ -253,7 +254,7 @@ string choose (queue<string> expQ, ofstream &out) { //This function implements t
             }
             }
             expQ.pop();
-            string exp4 = expressionParser(strQ4, out); //Sends 4th exression to the parser function and stores its result on exp4.
+            exp4 = expressionParser(strQ4, out); //Sends 4th exression to the parser function and stores its result on exp4.
             if(exp4 == "ERROR")
                 return exp4;
         }
@@ -405,7 +406,6 @@ string expressionParser(queue<string> &expr, ofstream &out) {// Function for dea
             string *ops[2] = {&op2, &op1};
             for( int i = 0; i < 2; i++) {
                 if(operand_stack.empty()) {
-                    //cout << "Syntax error: not enough operands";
                     return "ERROR";
                 } else {
                     string curop = operand_stack.top();
@@ -428,7 +428,6 @@ string expressionParser(queue<string> &expr, ofstream &out) {// Function for dea
             out << "\t" << temp << " = " << operat << " i32 " << op1 << ", " << op2 << "\n";
             operand_stack.push(temp);
         } else if(subj[0] == '(') {
-            //cout << "missing (\n" << endl;
             return "ERROR";
         } else {
             cout << "this shouldn't happen :/\n";
@@ -446,8 +445,6 @@ string expressionParser(lineReader &expr, ofstream &out) { // Alternative call t
     }
     return expressionParser(strQ, out);
 }
-
-
 
 
 
@@ -476,12 +473,13 @@ int main(int argc, char const *argv[]) {
         count++;
         getline(in, line);
         lineReader reader(line); // The line is used to create a line reader.
-        string first_word = reader.get();// Then the first word is stored here to determine the purpose of the line
-        if(first_word.length() == 0 || first_word == "#")
+        string first_word = reader.get();// Then the first word is stored here to determine the purpose of the line.
+        if(first_word.length() == 0 || first_word == "#") //If it is empty line or comment line it continue.
             continue;
-        if(first_word == "}") {
-            if(!conditionStc.empty()) {
+        if(first_word == "}") { //If the first word is "}", it has to be closing parenthese of condition block to be syntactically correct.
+            if(!conditionStc.empty()) { //Checks if there is condition block to close.
                 string cond = conditionStc.top();
+                //Creates end blocks 
                 if(cond.substr(0, 2) == "wh") {
                     out << "\tbr label %" << cond << "cond\n";
                 } else {
@@ -489,7 +487,7 @@ int main(int argc, char const *argv[]) {
                 }
                 out << "\n" << conditionStc.top() << "end:\n";
                 conditionStc.pop();
-                if(reader.has()) {
+                if(reader.has()) { //Checks if there is something after "}".
                     hasError = true;
                     break;
                 }
@@ -498,15 +496,14 @@ int main(int argc, char const *argv[]) {
                 break;
             }
         }
-        else if(first_word[0] >= 48 && first_word[0] <= 57) { //Checks if the first character is a number, which is always a syntax error
-
+        else if(first_word[0] >= 48 && first_word[0] <= 57) { //Checks if the first character is a number, which is always a syntax error.
             hasError = true;
             break;
         }
         else if(keyWords.find(first_word) == keyWords.end()) { // if the first word is not a keyword, it is assumed to be an assignment statement
             if(reader.peek() == "=") {// Checks for '=' statement
                 reader.get();
-                if(!variableHandler::exists(first_word)) { // if variable does not exist, we initialzie it
+                if(!variableHandler::exists(first_word)) { // if variable does not exist, we initialzie it.
                     variableHandler::initialize(first_word);
                 }
 
@@ -522,13 +519,12 @@ int main(int argc, char const *argv[]) {
             } else {
                 hasError = true;
             }
-        } else {
-            if(first_word == "while") {
+        } else { 
+            //This part is used if the line starts with one of the special words. 
+            if(first_word == "while") { //Implements while condition. 
                 queue<string> strQ;
                 string token;
-
-                cout << "hello";
-                if(reader.peek() == "(") {
+                if(reader.peek() == "(") { // Pushes the tokens of the condition of "while" into a queue to sends parser function if expression has correct syntax.
                     while(reader.peek() != "{") {
                         token = reader.get();
                         strQ.push(token);
@@ -544,7 +540,7 @@ int main(int argc, char const *argv[]) {
                     if(hasError) {
                         break;
                     }
-                    string name = "wh" + to_string(cdc);
+                    string name = "wh" + to_string(cdc); //Creates the condition and comparison parts 
                     cdc++;
                     out << "\tbr label %" << name << "cond\n\n";
                     out << name << "cond:\n" ;
@@ -553,23 +549,21 @@ int main(int argc, char const *argv[]) {
                         hasError = true;
                         break;
                     }
-                    if(conditionStc.empty()) {
+                    if(conditionStc.empty()) { //Checks if there is another condition on the stack that is not closed. It is to prevent nested loops.
                         string last = getTemp();
-                        condition(last, before_last, out);
+                        condition(last, before_last, out);  //Writes the condition part and body label
                         goBody(name, last, out);
                         out << name << "body:\n";
-                        conditionStc.push(name);
+                        conditionStc.push(name); //After condition is created it is pushed to the stack
                     } else {
-
                         hasError = true;
                         break;
                     }
                 } else {
-
                     hasError = true;
                     break;
                 }
-            } else if (first_word == "if") {
+            } else if (first_word == "if") {  // Pushes the tokens of the condition of "if" into a queue to sends parser function if expression has correct syntax.
                 queue<string> strQ;
                 string token;
                 if(reader.peek() == "(") {
@@ -589,7 +583,7 @@ int main(int argc, char const *argv[]) {
 
                         break;
                     }
-                    string name = "if" + to_string(cdc);
+                    string name = "if" + to_string(cdc); //Creates the condition and comparison parts
                     cdc++;
                     out << "\tbr label %" << name << "cond\n\n";
                     out << name << "cond:\n";
@@ -598,12 +592,12 @@ int main(int argc, char const *argv[]) {
                         hasError = true;
                         break;
                     }
-                    if(conditionStc.empty()) {
+                    if(conditionStc.empty()) { //Checks if there is another condition on the stack that is not closed. It is to prevent nested loops.
                         string last = getTemp();
-                        condition(last, before_last, out);
-                        goBody(name, last, out);
-                        out << name << "body:\n";
-                        conditionStc.push(name);
+                        condition(last, before_last, out);    
+                        goBody(name, last, out);        //Writes the condition part and body label
+                        out << name << "body:\n"; 
+                        conditionStc.push(name);    //After condition is created it is pushed to the stack
                     } else {
                         hasError = true;
                     }
@@ -612,28 +606,24 @@ int main(int argc, char const *argv[]) {
                     hasError = true;
                     break;
                 }
-            } else if (first_word == "print") {
+            } else if (first_word == "print") { //If the first word is "print", then firstly sends expression to the parser function and then writes the return value of the function to the print template.
                 queue<string> strQ;
                 string token;
                 if(reader.peek() == "(") {
                     string temp = expressionParser(reader, out);
                     if(temp == "ERROR" ) {
-
                         hasError = true;
                         break;
                     }
                     out << "\tcall i32 (i8*, ...)* @printf(i8* getelementptr ([4 x i8]* @print.str, i32 0, i32 0), i32 " << temp << ")\n";
                 } else {
-
                     hasError = true;
                     break;
                 }
-            } else if(first_word == "choose") {
-
+            } else if(first_word == "choose") { //Choose cannot be first word in the line. Returns error in this case.
                 hasError = true;
                 break;
             } else {
-
                 hasError = true;
                 break;
             }
@@ -641,15 +631,13 @@ int main(int argc, char const *argv[]) {
         }
     }
 
-
-    if(!conditionStc.empty()) {
-
+    if(!conditionStc.empty()) { //At the end, checks whether there is a condition block that is not closed by "}" or not.
         hasError = true;
     }
 
     out.close();
     in.close();
-    if(hasError) {// if an error has been encountered, the intermediate file is removed and the code for printing the error is writte out instead
+    if(hasError) {// ıf an error has been encountered, the intermediate file is removed and the code for printing the error is writte out instead
 
         remove(".intermediate");
         out_final << "; ModuleID = 'mylang2ir'\ndeclare i32 @printf(i8 *, ...)\n@print.error = constant [23 x i8] c\"Line %d: syntax error\\0A\\00\"\n\ndefine i32 @main() {\n\tcall i32 (i8 *, ...)* @printf(i8* getelementptr([23 x i8]* @print.error,i32 0, i32 0) , i32 " + to_string(count) + ")\n\tret i32 0\n}";
@@ -657,7 +645,7 @@ int main(int argc, char const *argv[]) {
         return 0;
     }
 
-    // at the end, the boilerplate code and the variable allocations are written to the output file and then the intermediate file is copied over to the output.
+    // At the end, the boilerplate code and the variable allocations are written to the output file and then the intermediate file is copied over to the output.
     out_final << boilerplate << "\n";
     out_final << variableHandler::getInits();
     out_final << "\n";
@@ -672,7 +660,7 @@ int main(int argc, char const *argv[]) {
     out_final << "\tret i32 0" << "\n" ;
     out_final << "}";
 
-    // THe files are closed and the intermediate file is removed
+    // The files are closed and the intermediate file is removed
     copier.close();
     out_final.close();
     remove(".intermediate");
