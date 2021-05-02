@@ -294,7 +294,7 @@ string expressionParser(queue<string> &expr, ofstream &out) {// Function for dea
     while(!expr.empty()) {// This part reads the tokenized expression and turns it into a postfix queue
         string token = expr.front();
         expr.pop();
-        if(isNumber(token) or isValidVar(token)) {
+        if(isNumber(token) or isValidVar(token)) { 
             if(operatortime) {
                 return "ERROR";
             }
@@ -342,7 +342,7 @@ string expressionParser(queue<string> &expr, ofstream &out) {// Function for dea
 
                 }
                 op_stack.pop();
-            } else if(token == "choose") {
+            } else if(token == "choose") { //The choose functionality is implemented here
 
                 if(operatortime) {
                     return "ERROR";
@@ -351,7 +351,7 @@ string expressionParser(queue<string> &expr, ofstream &out) {// Function for dea
                 int para = 0;
                 queue<string> choose_q;
 
-                while(!expr.empty()) {
+                while(!expr.empty()) { // the expression is extracted
                     string top = expr.front();
 
                     expr.pop();
@@ -390,8 +390,8 @@ string expressionParser(queue<string> &expr, ofstream &out) {// Function for dea
         out_queue.pop();
 
         if(isAlphaNumeric(subj[0]) or subj[0] == '%') {
-            if(subj[0] != '%' and !isNumber(subj)) {
-                if(!variableHandler::exists(subj)) {
+            if(subj[0] != '%' and !isNumber(subj)) { // Variables firsgt mentioned in the expresion are initialized here
+                if(!variableHandler::exists(subj)) { 
                     if(variableHandler::initialize(subj) == "ERROR") {
                         return "ERROR";
                     }
@@ -425,12 +425,12 @@ string expressionParser(queue<string> &expr, ofstream &out) {// Function for dea
                 operat = "sdiv";
             }
 
-            out << "\t" << temp << " = " << operat << " i32 " << op1 << ", " << op2 << "\n";
+            out << "\t" << temp << " = " << operat << " i32 " << op1 << ", " << op2 << "\n"; // the llvm code is constructed
             operand_stack.push(temp);
         } else if(subj[0] == '(') {
             return "ERROR";
         } else {
-            cout << "this shouldn't happen :/\n";
+            cout << "this shouldn't happen :/\n"; // It shouldn't
             return "ERROR";
         }
     }
